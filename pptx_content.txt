@@ -1,0 +1,22 @@
+Slide 1: <<PROJECT TITLE **TIMES NEW ROMAN FONT SIZE 39**>> | M.Tech Project Work Review-II  Presented by  <<STUDENT NAME (STUDENT REGISTER NO)>> <<M.Tech Computer Science and Engineering (SPECILAZATION)>>  Under the Guidance of <<GUIDE NAME>> <<GUIDE DESIGNATION>> School of Computer Science and Engineering Vellore Institute of Technology, Chennai. 
+Slide 2: 2 | CONTENTS | ABSTRACT INTRODUCTION LITERATURE SURVEY RESEARCH GAPS  OBJECTIVES MODULE IDENTIFICATION SYSTEM ARCHITECTURE DEVELOPMENT & INTEGRATION PROTOTYPE / RESEARCH FRAMEWORK OUTCOME RESULTS TIMELINE / GANTT CHART REFERENCES
+Slide 3: 1.ABSTRACT | << NOT MORE THAN 200 WORDS FONT TIMES NEW ROMAN SIZE 24>> << Brief summary of project including problem, methodology, and expected outcome >> | 3
+Slide 4: 2. INTRODUCTION | << Overview of problem domain, motivation, and objectives (max 150 words) FONT TIMES NEW ROMAN SIZE 24>>  | 4
+Slide 5: 3.LITERATURE SURVEY | 5
+Slide 6: LITERATURE SURVEY (CONTD..,) | 6
+Slide 7: LITERATURE SURVEY (CONTD..,) | 7
+Slide 8: 4. RESEARCH GAPS | 8
+Slide 9: 5. OBJECTIVES | 9
+Slide 10: 6. MODULE IDENTIFICATION |  << • Identify key modules/subsystems • Define functionality of each module • Show module interaction  FONT TIMES NEW ROMAN SIZE 24>>  | 10
+Slide 11: 7. SYSTEM ARCHITECTURE | << • Overall architecture diagram • Data flow between modules • Technology stack used TEXT FONT TIMES NEW ROMAN>> | 11
+Slide 12: 8. DEVELOPMENT & INTEGRATION | << • Implementation of modules • Integration strategy • Challenges faced and solutions  FONT TIMES NEW ROMAN>> | 12
+Slide 13: 9. PROTOTYPE / RESEARCH FRAMEWORK | << • Working prototype description OR • Research framework setup  FONT TIMES NEW ROMAN>> | 13
+Slide 14: 10. OUTCOME | << • Working model screenshots/results OR • Data classification & analysis • Key insights/results  FONT TIMES NEW ROMAN>> | 14
+Slide 15: 11. RESULTS | << • Performance metrics • Observations • Validation of approach  FONT TIMES NEW ROMAN>> | 15
+Slide 16: 12. TIMELINE / GANTT CHART | 16 | • Planned vs completed tasks • Next milestones 
+Slide 17: 13. REFERENCES | Lock, S., & Kotonya, G. (1999). An integrated, probabilistic framework for requirement change impact analysis. Australasian Journal of Information Systems, 6(2). HOW TO CITE A PAPER GO TO GOOGLE SCHOLAR GIVE THE PAPER TITLE IN SEARCH ONCE THE PAPER WHAT YOU HAVE SEARCHED FOR IS LISTED  CHOOSE CITE AT THE BOTTOM OF THE PAPER SELECT APA FORMAT AND COPY IT HERE  | 17
+Slide 18: REFERENCES (CONTD..,) |  | 18
+Slide 19: REFERENCES (CONTD..,) |  | 19
+Slide 20: REFERENCES (CONTD..,) |  | 20
+Slide 21: REFERENCES (CONTD..,) |  | 21
+Slide 22: Thank You | 22

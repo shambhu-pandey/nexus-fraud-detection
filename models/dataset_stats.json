@@ -1,0 +1,50 @@
+{
+    "banksim": {
+        "total_rows_available": 594643,
+        "total_features": 9,
+        "rows_used": 594643,
+        "original_fraud_count": 7200,
+        "original_fraud_ratio": 0.012108105199254007,
+        "sampled_fraud_count": 7200,
+        "sampled_fraud_ratio": 0.012108105199254007,
+        "sampling_used": false,
+        "sampling_reason": "",
+        "file_path": "data/banksim_full.csv.gz"
+    },
+    "ieee": {
+        "total_rows_available": 590540,
+        "total_features": 98,
+        "rows_used": 590540,
+        "original_fraud_count": 20663,
+        "original_fraud_ratio": 0.03499000914417313,
+        "sampled_fraud_count": 20663,
+        "sampled_fraud_ratio": 0.03499000914417313,
+        "sampling_used": false,
+        "sampling_reason": "",
+        "file_path": "data/ieee_full.csv.gz"
+    },
+    "paysim": {
+        "total_rows_available": 6362620,
+        "total_features": 11,
+        "rows_used": 250000,
+        "original_fraud_count": 8213,
+        "original_fraud_ratio": 0.001290820448180152,
+        "sampled_fraud_count": 322,
+        "sampled_fraud_ratio": 0.001288,
+        "sampling_used": true,
+        "sampling_reason": "Dataset has 6,362,620 rows. Stratified sample of 250,000 rows preserving approximately 0.1291% fraud ratio.",
+        "file_path": "data/paysim_full.csv.gz"
+    },
+    "cicids": {
+        "total_rows_available": 2830743,
+        "total_features": 79,
+        "rows_used": 150000,
+        "original_fraud_count": 557646,
+        "original_fraud_ratio": 0.19699633629757277,
+        "sampled_fraud_count": 29549,
+        "sampled_fraud_ratio": 0.19699333333333333,
+        "sampling_used": true,
+        "sampling_reason": "Dataset has 2,830,743 rows. Stratified sample of 150,000 rows preserving approximately 19.6996% fraud ratio.",
+        "file_path": "data/cicids_full.csv.gz"
+    }
+}
