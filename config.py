@@ -188,10 +188,10 @@ FRAUD_EXAMPLES = {
     },
     "banksim": {
         "step": 1,
-        "amount": 25000.0,
+        "amount": 2500.0,
         "category": "es_travel",
-        "age": "U",
-        "gender": "E",
+        "age": "3",
+        "gender": "M",
     },
     "cicids": {
         "Destination Port": 80,

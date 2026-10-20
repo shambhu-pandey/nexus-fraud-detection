@@ -530,7 +530,7 @@ def _page_predict():
     st.info(f"Decision threshold for {DATASET_META[ds]['short_name']} / {sel}: {selected_threshold:.3f}")
 
     st.markdown("---")
-    st.markdown("**Transaction Details** (defaults are pre-filled with fraud examples for demonstration)")
+    st.markdown("**Transaction Details** (defaults are pre-filled with demonstration examples)")
 
     # 13. DEFAULT BEHAVIOR: Default input -> FRAUD (for all datasets)
     defaults = FRAUD_EXAMPLES.get(ds, {})
@@ -552,6 +552,32 @@ def _page_predict():
 
     if st.button("Analyze Transaction", type="primary", key=f"lp_go_{ds}"):
         from modules.model_trainer import predict_fraud
+
+        if ds == "banksim" and tx.get("category") == "__education_not_in_banksim__":
+            st.warning(
+                "BankSim cannot produce a valid education-payment prediction: "
+                "education / tuition is not a category in this dataset. Choose an actual "
+                "BankSim category only for a separate synthetic what-if; do not use another "
+                "category as a substitute for education."
+            )
+            age_display = {
+                "0": "0-18", "1": "19-25", "2": "26-35", "3": "36-45",
+                "4": "46-55", "5": "56-65", "6": "over 65", "U": "unknown",
+            }
+            gender_display = {"F": "female", "M": "male", "E": "enterprise", "U": "unknown"}
+            st.caption(
+                f"Entered profile: age group {tx.get('age', 'U')} "
+                f"({age_display.get(tx.get('age', 'U'), 'unknown')}), "
+                f"gender {tx.get('gender', 'U')} ({gender_display.get(tx.get('gender', 'U'), 'unknown')}). "
+                "These fields cannot make the missing education category valid."
+            )
+            st.info(
+                "BankSim amounts are euro-denominated simulator values. Its €2,500-and-above "
+                "records are exceptionally rare and all carry the synthetic fraud label in "
+                "this file, so a model score for that amount is not evidence that a real "
+                "education payment is fraudulent."
+            )
+            st.stop()
         
         # 3. ENSURE FEATURE CONSISTENCY
         # The variables map directly to DataFrame bounds mapping extraction dependencies strictly
@@ -568,11 +594,14 @@ def _page_predict():
 
             # --- RESULT HEADER / ALERT BOX ---
             alert_color = '#ef4444' if pred == 1 else '#10b981'
-            status_text = 'ATTACK DETECTED' if pred == 1 else 'Legitimate'
+            if ds == "banksim":
+                status_text = 'MODEL FLAGGED THIS SYNTHETIC EXAMPLE' if pred == 1 else 'MODEL DID NOT FLAG THIS EXAMPLE'
+            else:
+                status_text = 'ATTACK DETECTED' if pred == 1 else 'Legitimate'
             st.markdown(
                 f"<div style='border-radius:10px;padding:18px;margin-bottom:8px;background-color:var(--secondary-background-color);border:1px solid {alert_color};'>"
                 f"<h3 style='margin:0 0 6px 0;color:{alert_color};'>{status_text}</h3>"
-                f"<div style='color:var(--text-color);'>Confidence: <strong>{prob:.2%}</strong> | Dataset: <strong>{DATASET_META[ds]['display_name']}</strong> | Features: <strong>{len(tx)}</strong></div>"
+                f"<div style='color:var(--text-color);'>{'Model fraud score' if ds == 'banksim' else 'Confidence'}: <strong>{prob:.2%}</strong> | Dataset: <strong>{DATASET_META[ds]['display_name']}</strong> | Features: <strong>{len(tx)}</strong></div>"
                 f"</div>", unsafe_allow_html=True
             )
 
@@ -657,16 +686,21 @@ def _page_predict():
             c1, c2, c3 = st.columns(3)
             with c1:
                 if pred == 1:
-                    st.error('FRAUD DETECTED')
+                    st.error('MODEL FLAGGED EXAMPLE' if ds == "banksim" else 'FRAUD DETECTED')
                 else:
-                    st.success('LEGITIMATE')
+                    st.success('NOT FLAGGED' if ds == "banksim" else 'LEGITIMATE')
             with c2:
-                st.metric('Confidence Score', f"{prob:.1%}")
+                st.metric('Model fraud score' if ds == "banksim" else 'Confidence Score', f"{prob:.1%}")
             with c3:
                 st.metric('ML Output (Raw)', f"{details['ml_probability']:.3f}")
             
             thresh = details['threshold']
-            if pred == 0 and prob >= 0.5:
+            if ds == "banksim":
+                st.caption(
+                    "BankSim is synthetic research data. This threshold result is a model "
+                    "demonstration, not a real bank authorization or fraud determination."
+                )
+            elif pred == 0 and prob >= 0.5:
                 st.info(f"**Why is this Legitimate?** The model evaluated a **{prob:.1%} chance of fraud**, but this falls *below* our strict decision threshold of **{thresh:.1%}**. The threshold is elevated intentionally to prevent **false alarms** (blocking innocent users) for this specific dataset.")
             elif pred == 0:
                 st.caption(f"**Note:** At {prob:.1%}, the threat level is safely below the {thresh:.1%} blocking threshold. The transaction is Legitimate.")
@@ -679,6 +713,42 @@ def _page_predict():
             from modules.fraud_explainer import get_simple_fraud_explanation, display_fraud_explanation
             expl = get_simple_fraud_explanation(tx, tx, pred, prob, ds)
             display_fraud_explanation(expl, ds)
+
+            if ds == "banksim":
+                from modules.model_trainer import get_probabilities
+                age_codes = ["0", "1", "2", "3", "4", "5", "6", "U"]
+                gender_codes = ["F", "M", "E", "U"]
+                age_labels = {
+                    "0": "0–18", "1": "19–25", "2": "26–35", "3": "36–45",
+                    "4": "46–55", "5": "56–65", "6": ">65", "U": "Unknown",
+                }
+                gender_labels = {"F": "Female", "M": "Male", "E": "Enterprise", "U": "Unknown"}
+                counterfactual_rows = []
+                for age_code in age_codes:
+                    for gender_code in gender_codes:
+                        counterfactual = dict(tx, age=age_code, gender=gender_code)
+                        counterfactual_rows.append(counterfactual)
+                score_values = get_probabilities(models[sel], pd.DataFrame(counterfactual_rows), sel)
+                score_table = pd.DataFrame(
+                    score_values.reshape(len(age_codes), len(gender_codes)),
+                    index=[age_labels[code] for code in age_codes],
+                    columns=[gender_labels[code] for code in gender_codes],
+                )
+                score_table.index.name = "Age group"
+                spread = float(score_table.to_numpy().max() - score_table.to_numpy().min())
+                with st.expander("Age and gender sensitivity check", expanded=False):
+                    st.caption(
+                        "Same amount, category, and day; only the age/gender codes change. "
+                        "This counterfactual audit shows model sensitivity, not evidence that "
+                        "a demographic group is suspicious. BankSim is synthetic, and its "
+                        "unknown/enterprise groups are small."
+                    )
+                    st.table(score_table.style.format("{:.1%}"))
+                    st.write(
+                        f"Score range across these combinations: "
+                        f"{score_table.to_numpy().min():.1%}–{score_table.to_numpy().max():.1%} "
+                        f"(spread {spread:.1%})."
+                    )
 
         except Exception as e:
             st.error(f"Prediction Error: {str(e)}")
@@ -716,17 +786,41 @@ def _form_paysim(d):
 
 def _form_banksim(d):
     c1, c2, c3 = st.columns(3)
-    cats = ["es_transportation","es_health","es_otherservices","es_food",
-            "es_hotelservices","es_tech","es_sportsandtoys","es_wellnessandbeauty",
-            "es_hyper","es_fashion","es_barsandrestaurants","es_travel","es_leisure"]
+    cats = ["es_transportation", "es_health", "es_otherservices", "es_food",
+            "es_hotelservices", "es_tech", "es_sportsandtoys", "es_wellnessandbeauty",
+            "es_hyper", "es_fashion", "es_barsandrestaurants", "es_travel", "es_leisure",
+            "es_home", "es_contents", "__education_not_in_banksim__"]
+    category_labels = {
+        "es_transportation": "Transportation", "es_health": "Health",
+        "es_otherservices": "Other services", "es_food": "Food",
+        "es_hotelservices": "Hotel services", "es_tech": "Technology",
+        "es_sportsandtoys": "Sports and toys", "es_wellnessandbeauty": "Wellness and beauty",
+        "es_hyper": "Hypermarket", "es_fashion": "Fashion",
+        "es_barsandrestaurants": "Bars and restaurants", "es_travel": "Travel",
+        "es_leisure": "Leisure", "es_home": "Home", "es_contents": "Contents",
+        "__education_not_in_banksim__": "Education / tuition (not in BankSim)",
+    }
+    age_labels = {
+        "0": "0–18", "1": "19–25", "2": "26–35", "3": "36–45",
+        "4": "46–55", "5": "56–65", "6": ">65", "U": "Unknown",
+    }
+    gender_labels = {"F": "Female", "M": "Male", "E": "Enterprise", "U": "Unknown"}
+    st.caption(
+        "BankSim is a synthetic Spanish retail-payment dataset. Amounts use euros; "
+        "education / tuition is not represented by its merchant categories."
+    )
     with c1:
-        amount = st.number_input("Amount", 0.0, 50000.0, float(d.get("amount", 25000)), 100.0, key="fb_a")
-        cat = st.selectbox("Category", cats, index=cats.index(d.get("category","es_travel")), key="fb_c")
+        amount = st.number_input("Amount (€)", 0.0, 50000.0, float(d.get("amount", 25000)), 100.0, key="fb_a")
+        cat = st.selectbox("Merchant category", cats,
+                           index=cats.index(d.get("category", "es_travel")),
+                           format_func=lambda value: category_labels[value], key="fb_c")
     with c2:
         ages = ["0","1","2","3","4","5","6","U"]
-        age = st.selectbox("Age Group", ages, index=ages.index(d.get("age","U")), key="fb_ag")
+        age = st.selectbox("Age group", ages, index=ages.index(d.get("age","U")),
+                           format_func=lambda value: f"{value} — {age_labels[value]}", key="fb_ag")
         genders = ["F","M","E","U"]
-        gen = st.selectbox("Gender", genders, index=genders.index(d.get("gender","E")), key="fb_g")
+        gen = st.selectbox("Gender code", genders, index=genders.index(d.get("gender","E")),
+                           format_func=lambda value: f"{value} — {gender_labels[value]}", key="fb_g")
     with c3:
         step = st.number_input("Day Step", 1, 180, int(d.get("step", 1)), key="fb_s")
     return {"step": step, "amount": amount, "category": cat, "age": age, "gender": gen}

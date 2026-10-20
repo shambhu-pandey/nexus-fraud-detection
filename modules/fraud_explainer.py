@@ -321,44 +321,92 @@ def _explain_cicids_fraud(transaction_data, feature_values, prediction, probabil
 
 
 def _explain_banksim_fraud(transaction_data, feature_values, prediction, probability):
-    explanation = {
+    """Explain a BankSim score using observed synthetic-data context."""
+    age_labels = {
+        "0": "0-18", "1": "19-25", "2": "26-35", "3": "36-45",
+        "4": "46-55", "5": "56-65", "6": "over 65", "U": "unknown",
+    }
+    gender_labels = {"F": "female", "M": "male", "E": "enterprise", "U": "unknown"}
+    # Counts calculated from the local full BankSim file (594,643 rows).
+    category_counts = {
+        "es_transportation": (505119, 0), "es_food": (26254, 0),
+        "es_health": (16133, 1696), "es_wellnessandbeauty": (15086, 718),
+        "es_fashion": (6454, 116), "es_barsandrestaurants": (6373, 120),
+        "es_hyper": (6098, 280), "es_sportsandtoys": (4002, 1982),
+        "es_tech": (2370, 158), "es_home": (1986, 302),
+        "es_hotelservices": (1744, 548), "es_otherservices": (912, 228),
+        "es_contents": (885, 0), "es_travel": (728, 578), "es_leisure": (499, 474),
+    }
+    category_names = {
+        "es_transportation": "transportation", "es_food": "food", "es_health": "health",
+        "es_wellnessandbeauty": "wellness and beauty", "es_fashion": "fashion",
+        "es_barsandrestaurants": "bars and restaurants", "es_hyper": "hypermarket",
+        "es_sportsandtoys": "sports and toys", "es_tech": "technology", "es_home": "home",
+        "es_hotelservices": "hotel services", "es_otherservices": "other services",
+        "es_contents": "contents", "es_travel": "travel", "es_leisure": "leisure",
+    }
+    amount = float(transaction_data.get("amount", 0) or 0)
+    category = str(transaction_data.get("category", ""))
+    age = str(transaction_data.get("age", "U"))
+    gender = str(transaction_data.get("gender", "U"))
+    reasons = []
+
+    if amount >= 2500:
+        amount_issue = (
+            "In this local BankSim file, only 280 of 594,643 transactions (0.047%) "
+            "were at least EUR 2,500; all 280 carry the synthetic fraud label. "
+            "This is a simulator pattern, not proof about a real payment."
+        )
+    elif amount > 1031.23478:
+        amount_issue = "This is above the 99.9th percentile of amounts in the local BankSim file."
+    elif amount > 236.7558:
+        amount_issue = "This is above the 99th percentile of amounts in the local BankSim file."
+    else:
+        amount_issue = "This amount falls within the lower 99% of the local BankSim amount distribution."
+    reasons.append({
+        "factor": "Amount (BankSim euros)", "value": f"EUR {amount:,.2f}",
+        "issue": amount_issue,
+        "tip": "BankSim amounts are synthetic euro-denominated values. If your amount is INR 2,500, do not enter it as EUR 2,500.",
+    })
+
+    if category in category_counts:
+        count, fraud_count = category_counts[category]
+        category_rate = fraud_count / count
+        reasons.append({
+            "factor": "Observed synthetic category pattern",
+            "value": category_names.get(category, category),
+            "issue": (
+                f"{fraud_count:,} of {count:,} local transactions in this category "
+                f"({category_rate:.2%}) carry the dataset's synthetic fraud label. "
+                "This describes the file, not the model's explanation or a real merchant."
+            ),
+            "tip": "Do not substitute a different category for education or tuition; that changes the scenario.",
+        })
+
+    reasons.append({
+        "factor": "Age and gender inputs",
+        "value": f"Age group {age} ({age_labels.get(age, 'unknown')}); {gender_labels.get(gender, 'unknown')}",
+        "issue": "The trained BankSim pipeline receives these coarse demographic codes, so they may affect its score.",
+        "tip": "The sensitivity table varies age and gender while holding the transaction fixed. Demographics are not standalone evidence of fraud.",
+    })
+    decision = "flagged" if prediction else "did not flag"
+    return {
         "is_fraud": bool(prediction),
         "fraud_probability": float(probability),
         "risk_level": "HIGH" if probability > 0.7 else "MEDIUM" if probability > 0.3 else "LOW",
-        "main_reasons": [], "what_went_wrong": [], "simple_explanation": "", "recommendations": [], "technical_details": {}
+        "main_reasons": reasons,
+        "what_went_wrong": [],
+        "simple_explanation": (
+            f"The selected model {decision} this synthetic BankSim example at a model score "
+            f"of {probability:.1%}. The context below describes the simulated file; it does "
+            "not establish why a real payment is safe or fraudulent."
+        ),
+        "recommendations": [
+            "Use this result only to demonstrate the model on supported BankSim categories.",
+            "For a real payment, verify it using your bank or payment provider's normal process; do not act on this synthetic score alone.",
+        ],
+        "technical_details": {},
     }
-    amount = transaction_data.get("amount", 0)
-    category = transaction_data.get("category", "")
-    risk_factors = []
-    
-    if amount > 1000:
-        risk_factors.append({
-            "factor": "Transaction Amount", "value": f"${amount:,.2f}",
-            "issue": "This is a very large amount of money for a typical shopping trip",
-            "tip": "Verify this purchase if you didn't buy anything expensive recently."
-        })
-    elif amount > 300:
-        risk_factors.append({
-            "factor": "Transaction Amount", "value": f"${amount:,.2f}",
-            "issue": "Higher spending than your normal shopping routine",
-            "tip": "Ensure you recognize this store and amount."
-        })
-        
-    if category in ["es_travel", "es_hotelservices", "es_leisure"]:
-        risk_factors.append({
-            "factor": "Merchant Category", "value": category.replace('es_','').title(),
-            "issue": "This merchant type (like travel bookings) is a favorite target for scammers",
-            "tip": "Double-check that you actually booked this."
-        })
-        
-    explanation["main_reasons"] = risk_factors
-    if risk_factors:
-        reasons_text = [f"• {rf['factor']}: {rf['issue']}" for rf in risk_factors]
-        explanation["simple_explanation"] = f"This BankSim transaction shows unusual patterns:\n\n" + "\n".join(reasons_text)
-    else:
-        explanation["simple_explanation"] = "This retail transaction aligns with typical legitimate spending rules."
-    explanation["recommendations"] = ["Review monthly credit statements", "Set spending limits"]
-    return explanation
 
 def _explain_ieee_fraud(transaction_data, feature_values, prediction, probability):
     explanation = {
@@ -400,12 +448,12 @@ def display_fraud_explanation(explanation, dataset_type="paysim"):
     """
     
     # Simple Explanation
-    st.markdown("### What Happened?")
+    st.markdown("### Model Result Context" if dataset_type == "banksim" else "### What Happened?")
     st.markdown(explanation["simple_explanation"])
     
     # Detailed Reasons
     if explanation["main_reasons"]:
-        st.markdown("### Why Was This Flagged?")
+        st.markdown("### BankSim Dataset Context" if dataset_type == "banksim" else "### Why Was This Flagged?")
         
         for i, reason in enumerate(explanation["main_reasons"], 1):
             with st.expander(f"**{i}. {reason['factor']}**", expanded=True):
