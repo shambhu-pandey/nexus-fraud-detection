@@ -61,7 +61,6 @@ DATASET_META = {
         "sample_size": 600_000,
         "domain": "Consumer Retail Banking",
         "description": "Full published BankSim payment simulator dataset (594,643 transactions).",
-        "source_note": "BankSim is simulated research data, not real bank customer transactions.",
     },
     "cicids": {
         "display_name": "CICIDS2017  -  Network Intrusion",
